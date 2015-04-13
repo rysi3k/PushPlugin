@@ -1,8 +1,11 @@
 package com.plugin.gcm;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.json.JSONException;
 import org.json.JSONObject;
-import java.util.Random;
+
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -12,6 +15,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import com.plugin.gcm.CordovaGCMBroadcastReceiver;
 
 import com.google.android.gcm.GCMBaseIntentService;
 
@@ -63,29 +67,54 @@ public class GCMIntentService extends GCMBaseIntentService {
 		Bundle extras = intent.getExtras();
 		if (extras != null)
 		{
+			if (CordovaGCMBroadcastReceiver.receivedMsgs == null)
+                CordovaGCMBroadcastReceiver.receivedMsgs = new ArrayList<String>();
+
+            List<String> msgs = null;
+            if (extras.getString("message") != null && extras.getString("message").length() != 0) {
+            	CordovaGCMBroadcastReceiver.receivedMsgs.add(extras.getString("message"));
+            	extras.putString("message", concatMsgs(CordovaGCMBroadcastReceiver.receivedMsgs));
+            	msgs = CordovaGCMBroadcastReceiver.receivedMsgs;
+            }	
+
+            boolean alwaysNotify = (extras.getString("alwaysNotify") != null) && (extras.getString("alwaysNotify").equals("true"));
+           	boolean showNotify   = (msgs != null) && (msgs.size()>0) && alwaysNotify && (extras.getString("message") != null);
+
 			// if we are in the foreground, just surface the payload, else post it to the statusbar
-            if (PushPlugin.isInForeground()) {
+           if ((PushPlugin.isInForeground()) && (!showNotify)) {
+           		CordovaGCMBroadcastReceiver.receivedMsgs = null; //Discard the received messages
 				extras.putBoolean("foreground", true);
                 PushPlugin.sendExtras(extras);
 			}
 			else {
-				extras.putBoolean("foreground", false);
+				extras.putBoolean("foreground", PushPlugin.isInForeground());
 
                 // Send a notification if there is a message
-                if (extras.getString("message") != null && extras.getString("message").length() != 0) {
-                    createNotification(context, extras);
-                }
+            	if ((msgs != null)&&(msgs.size()>0)){
+            		String notMsg = msgs.get(msgs.size()-1);
+            		createNotification(context, extras, notMsg, msgs.size());
+            	}
             }
         }
 	}
+	
+	public String concatMsgs(List<String> list){
+		String str = "[";
+		for (int i = 0; i < list.size();i++){
+			if (i>0)
+				str += ",";
+			str = str + "\"" + list.get(i) + "\"";
+		}
+		str += "]";
+		return str;
+	}
 
-	public void createNotification(Context context, Bundle extras)
+	public void createNotification(Context context, Bundle extras, String notMsg, int msgCnt)
 	{
 		int notId = 0;
 		
 		try {
-			Random rand = new Random();
-			notId = Integer.parseInt(extras.getString("notId",Integer.toString(rand.nextInt(1000))));
+			notId = Integer.parseInt(extras.getString("notId"));
 			
 		}
 		catch(NumberFormatException e) {
@@ -103,7 +132,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 		notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		notificationIntent.putExtra("pushBundle", extras);
 
-		PendingIntent contentIntent = PendingIntent.getActivity(this, notId, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 		
 		int defaults = Notification.DEFAULT_ALL;
 
@@ -123,17 +152,13 @@ public class GCMIntentService extends GCMBaseIntentService {
 				.setContentIntent(contentIntent)
 				.setAutoCancel(true);
 
-		String message = extras.getString("message");
-		if (message != null) {
-			mBuilder.setContentText(message);
+		if (notMsg != null) {
+			mBuilder.setContentText(notMsg);
 		} else {
 			mBuilder.setContentText("<missing message content>");
 		}
 
-		String msgcnt = extras.getString("msgcnt");
-		if (msgcnt != null) {
-			mBuilder.setNumber(Integer.parseInt(msgcnt));
-		}
+		mBuilder.setNumber(msgCnt);
 		
 	
 		mNotificationManager.notify((String) appName, notId, mBuilder.build());

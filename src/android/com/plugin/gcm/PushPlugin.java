@@ -97,7 +97,26 @@ public class PushPlugin extends CordovaPlugin {
 	 * Sends a json object to the client as parameter to a method which is defined in gECB.
 	 */
 	public static void sendJavascript(JSONObject _json) {
-		String _d = "javascript:" + gECB + "(" + _json.toString() + ")";
+		String _d = "onMsgReceived = function(_method, _obj, _msgs, _rec) {  "+     	 		
+			"if (!_msgs) { "+ //At the first call, saves the _obj.message in a cache (_msgs)
+			    "_msgs = _obj.message;  "+
+			    "if ((typeof _obj.message) === 'string')  "+
+			      	 "_msgs = JSON.parse(_obj.message);  "+	      	 
+			"} "+
+			"if (_msgs) { "+
+
+				 "if (!_rec) _rec =  0; " + // Overwrite the _obj.message with the next msg in the _msgs list
+				 "_obj.message = _msgs[_rec];  "+
+
+				 "_method(_obj);  "+//Send the message
+
+				 "if (_rec < _msgs.length-1)  "+ //Call this function again for the next message in the list
+				    " window.setTimeout(function(){alert('4 messages: '+_msgs); onMsgReceived(_method, _obj, _msgs, _rec + 1);}, 300); "+
+			"} else {  "+
+			   "_method(_obj);  "+
+			"} "+
+		"};onMsgReceived(" + gECB + "," + _json.toString() + ")";
+
 		Log.v(TAG, "sendJavascript: " + _d);
 
 		if (gECB != null && gWebView != null) {

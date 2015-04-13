@@ -1,6 +1,12 @@
-# Cordova Push Notifications Plugin for Android, iOS, WP8, Windows8, BlackBerry 10 and Amazon Fire OS
+# Extended version of the Cordova Push Notifications Plugin for Android, iOS, WP8, Windows8, BlackBerry 10 and Amazon Fire OS
 
 ## DESCRIPTION
+
+This is an extension of the original Cordova Plugin, solving the issue #333 (https://github.com/phonegap-build/PushPlugin/pull/333). 
+
+* When there are more than one notification, clicking on one of them (in Android) will execute the callback function once for each pending notification, with a delay of 300 milliseconds between each one (for concurrent processing).
+
+## ORIGINAL DESCRIPTION
 
 This plugin is for use with [Cordova](http://incubator.apache.org/cordova/), and allows your application to receive push notifications on Amazon Fire OS, Android, iOS, Windows Phone and Windows8 devices.
 * The Amazon Fire OS implementation uses [Amazon's ADM(Amazon Device Messaging) service](https://developer.amazon.com/sdk/adm.html).

@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import com.plugin.gcm.CordovaGCMBroadcastReceiver;
 
 public class PushHandlerActivity extends Activity
 {
@@ -48,6 +49,7 @@ public class PushHandlerActivity extends Activity
             originalExtras.putBoolean("foreground", false);
             originalExtras.putBoolean("coldstart", !isPushPluginActive);
 
+            CordovaGCMBroadcastReceiver.receivedMsgs = null; //Discard the received messages
 			PushPlugin.sendExtras(originalExtras);
 		}
 	}
